@@ -47,6 +47,19 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        panel: {
+          DEFAULT: "hsl(var(--panel))",
+          foreground: "hsl(var(--panel-foreground))",
+        },
+        neon: {
+          cyan: "hsl(var(--neon-cyan))",
+          pink: "hsl(var(--neon-pink))",
+          lime: "hsl(var(--neon-lime))",
+          violet: "hsl(var(--neon-violet))",
+        },
+        warning: "hsl(var(--warning))",
+        success: "hsl(var(--success))",
+        danger: "hsl(var(--danger))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -57,6 +70,19 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      backgroundImage: {
+        hero: "var(--gradient-hero)",
+        panel: "var(--gradient-panel)",
+        neon: "var(--gradient-neon)",
+      },
+      boxShadow: {
+        neon: "var(--shadow-neon)",
+        pink: "var(--shadow-pink)",
+      },
+      fontFamily: {
+        display: ["Orbitron", "Rajdhani", "ui-sans-serif", "system-ui"],
+        body: ["Rajdhani", "ui-sans-serif", "system-ui"],
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -80,10 +106,20 @@ export default {
             height: "0",
           },
         },
+        pulseGlow: {
+          "0%, 100%": { opacity: "0.72", transform: "scale(1)" },
+          "50%": { opacity: "1", transform: "scale(1.025)" },
+        },
+        scanline: {
+          "0%": { transform: "translateY(-100%)" },
+          "100%": { transform: "translateY(100%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse-glow": "pulseGlow 3s ease-in-out infinite",
+        scanline: "scanline 5s linear infinite",
       },
     },
   },
