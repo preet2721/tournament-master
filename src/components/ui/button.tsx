@@ -15,6 +15,8 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        neon: "clip-corner bg-neon text-primary-foreground shadow-neon hover:shadow-pink hover:scale-[1.02] active:scale-[0.98]",
+        arcade: "clip-corner border border-primary/40 bg-panel text-primary shadow-neon hover:border-primary hover:bg-primary/10",
       },
       size: {
         default: "h-10 px-4 py-2",
