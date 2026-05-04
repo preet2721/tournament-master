@@ -471,7 +471,16 @@ export function GameTournamentPlanner() {
                   placeholder="Enter tournament ID"
                   onKeyDown={(e) => { if (e.key === "Enter") joinTournament(); }}
                 />
-                <Button className="w-full" variant="arcade" onClick={joinTournament}><Swords /> Join with ID</Button>
+                <Button className="w-full" variant="arcade" onClick={joinTournament}><Swords /> Load Tournament</Button>
+                <div className="pt-2 border-t border-border/50" />
+                <Input
+                  value={joinPlayerName}
+                  onChange={(e) => setJoinPlayerName(e.target.value)}
+                  placeholder="Your player / team name"
+                  onKeyDown={(e) => { if (e.key === "Enter") registerAsPlayer(); }}
+                />
+                <Button className="w-full" variant="neon" onClick={registerAsPlayer}><Plus /> Register as Player</Button>
+                <p className="text-xs text-muted-foreground">Use this to register yourself in a tournament you joined with an ID.</p>
               </div>
             </Panel>
 
