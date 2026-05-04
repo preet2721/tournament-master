@@ -218,6 +218,25 @@ export function GameTournamentPlanner() {
     toast({ title: "Tournament ID generated", description: `Share code ${data.tournament_code} is ready.` });
   };
 
+  const loadDemo = async () => {
+    if (!user) return toast({ title: "Login required", description: "Sign in to load the demo tournament.", variant: "destructive" });
+    const demoCode = `DEMO${Math.floor(1000 + Math.random() * 9000)}`;
+    const { data: t, error: tErr } = await db.from("tournaments").insert({
+      owner_id: user.id, name: "Valorant Demo Cup", game_type: "Valorant",
+      format: "Knockout", participant_target: 4, match_duration_minutes: 30,
+      status: "Draft", is_public: true, tournament_code: demoCode,
+    }).select().single();
+    if (tErr) return toast({ title: "Demo failed", description: tErr.message, variant: "destructive" });
+    const demoTeams = ["Team Phoenix", "Team Dragons", "Team Wolves", "Team Titans"];
+    const { error: pErr } = await db.from("participants").insert(
+      demoTeams.map((name, i) => ({ tournament_id: t.id, name, seed: i + 1 }))
+    );
+    if (pErr) return toast({ title: "Demo roster failed", description: pErr.message, variant: "destructive" });
+    setTournaments((items) => [t as Tournament, ...items]);
+    setSelectedId(t.id);
+    toast({ title: "Demo loaded", description: `${t.name} ready — hit "Generate Schedule" in the Bracket tab.` });
+  };
+
   const joinTournament = async () => {
     const code = joinCode.trim().toUpperCase();
     if (!code) return toast({ title: "Enter an ID", description: "Type a tournament joining ID.", variant: "destructive" });
