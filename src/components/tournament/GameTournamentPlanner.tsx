@@ -296,6 +296,7 @@ export function GameTournamentPlanner() {
     const { data: t } = await db.from("tournaments").select("*").eq("tournament_code", code).maybeSingle();
     if (t) {
       setTournaments((items) => items.some((x) => x.id === t.id) ? items : [t as Tournament, ...items]);
+      rememberJoined(t.id);
       setSelectedId(t.id);
     }
     setJoinPlayerName("");
