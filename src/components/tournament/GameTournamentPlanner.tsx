@@ -108,7 +108,9 @@ export function GameTournamentPlanner() {
     participant_target: 4,
     format: "Knockout" as Format,
     match_duration_minutes: 30,
+    tournament_code: "",
   });
+  const [joinCode, setJoinCode] = useState("");
 
   const selectedTournament = tournaments.find((item) => item.id === selectedId) ?? null;
   const participantMap = useMemo(() => new Map(participants.map((p) => [p.id, p])), [participants]);
