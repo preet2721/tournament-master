@@ -112,6 +112,7 @@ export function GameTournamentPlanner() {
     tournament_code: "",
   });
   const [joinCode, setJoinCode] = useState("");
+  const [joinPlayerName, setJoinPlayerName] = useState("");
 
   const selectedTournament = tournaments.find((item) => item.id === selectedId) ?? null;
   const participantMap = useMemo(() => new Map(participants.map((p) => [p.id, p])), [participants]);
@@ -247,6 +248,28 @@ export function GameTournamentPlanner() {
     setSelectedId(data.id);
     setJoinCode("");
     toast({ title: "Tournament loaded", description: data.name });
+  };
+
+  const registerAsPlayer = async () => {
+    if (!user) return toast({ title: "Sign in required", description: "Please sign in before registering.", variant: "destructive" });
+    const code = joinCode.trim().toUpperCase();
+    const playerName = joinPlayerName.trim();
+    if (!code) return toast({ title: "Enter an ID", description: "Type a tournament joining ID.", variant: "destructive" });
+    if (!playerName) return toast({ title: "Enter your name", description: "Type the player or team name to register.", variant: "destructive" });
+    const { error } = await db.rpc("join_tournament_as_player", {
+      _tournament_code: code,
+      _name: playerName,
+      _team_name: null,
+      _logo_url: null,
+    });
+    if (error) return toast({ title: "Could not register", description: error.message, variant: "destructive" });
+    const { data: t } = await db.from("tournaments").select("*").eq("tournament_code", code).maybeSingle();
+    if (t) {
+      setTournaments((items) => items.some((x) => x.id === t.id) ? items : [t as Tournament, ...items]);
+      setSelectedId(t.id);
+    }
+    setJoinPlayerName("");
+    toast({ title: "Registered!", description: `${playerName} joined the tournament.` });
   };
 
   const addParticipants = async () => {
@@ -448,7 +471,16 @@ export function GameTournamentPlanner() {
                   placeholder="Enter tournament ID"
                   onKeyDown={(e) => { if (e.key === "Enter") joinTournament(); }}
                 />
-                <Button className="w-full" variant="arcade" onClick={joinTournament}><Swords /> Join with ID</Button>
+                <Button className="w-full" variant="arcade" onClick={joinTournament}><Swords /> Load Tournament</Button>
+                <div className="pt-2 border-t border-border/50" />
+                <Input
+                  value={joinPlayerName}
+                  onChange={(e) => setJoinPlayerName(e.target.value)}
+                  placeholder="Your player / team name"
+                  onKeyDown={(e) => { if (e.key === "Enter") registerAsPlayer(); }}
+                />
+                <Button className="w-full" variant="neon" onClick={registerAsPlayer}><Plus /> Register as Player</Button>
+                <p className="text-xs text-muted-foreground">Use this to register yourself in a tournament you joined with an ID.</p>
               </div>
             </Panel>
 
