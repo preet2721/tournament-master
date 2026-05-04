@@ -206,6 +206,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      join_tournament_as_player: {
+        Args: {
+          _logo_url?: string
+          _name: string
+          _team_name?: string
+          _tournament_code: string
+        }
+        Returns: {
+          created_at: string
+          draws: number
+          id: string
+          logo_url: string | null
+          losses: number
+          name: string
+          points: number
+          score_against: number
+          score_for: number
+          seed: number
+          team_name: string | null
+          tournament_id: string
+          updated_at: string
+          wins: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "participants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       owns_tournament: { Args: { _tournament_id: string }; Returns: boolean }
     }
     Enums: {
