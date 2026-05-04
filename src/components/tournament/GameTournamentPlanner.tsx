@@ -113,6 +113,35 @@ export function GameTournamentPlanner() {
   });
   const [joinCode, setJoinCode] = useState("");
   const [joinPlayerName, setJoinPlayerName] = useState("");
+  const [search, setSearch] = useState("");
+  const [joinedIds, setJoinedIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("joinedTournamentIds") ?? "[]"); } catch { return []; }
+  });
+  const rememberJoined = (id: string) => {
+    setJoinedIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const next = [id, ...prev].slice(0, 50);
+      localStorage.setItem("joinedTournamentIds", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const visibleTournaments = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (q) {
+      return tournaments.filter((t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.tournament_code.toLowerCase().includes(q) ||
+        t.game_type.toLowerCase().includes(q)
+      );
+    }
+    const mine = tournaments.filter((t) => user && t.owner_id === user.id);
+    const joined = tournaments.filter((t) => joinedIds.includes(t.id) && !(user && t.owner_id === user.id));
+    const others = tournaments
+      .filter((t) => !(user && t.owner_id === user.id) && !joinedIds.includes(t.id))
+      .slice(0, 5);
+    return [...mine, ...joined, ...others];
+  }, [tournaments, search, user, joinedIds]);
 
   const selectedTournament = tournaments.find((item) => item.id === selectedId) ?? null;
   const participantMap = useMemo(() => new Map(participants.map((p) => [p.id, p])), [participants]);
@@ -245,6 +274,7 @@ export function GameTournamentPlanner() {
     if (error) return toast({ title: "Lookup failed", description: error.message, variant: "destructive" });
     if (!data) return toast({ title: "Not found", description: `No tournament with ID ${code}.`, variant: "destructive" });
     setTournaments((items) => items.some((t) => t.id === data.id) ? items : [data as Tournament, ...items]);
+    rememberJoined(data.id);
     setSelectedId(data.id);
     setJoinCode("");
     toast({ title: "Tournament loaded", description: data.name });
@@ -266,6 +296,7 @@ export function GameTournamentPlanner() {
     const { data: t } = await db.from("tournaments").select("*").eq("tournament_code", code).maybeSingle();
     if (t) {
       setTournaments((items) => items.some((x) => x.id === t.id) ? items : [t as Tournament, ...items]);
+      rememberJoined(t.id);
       setSelectedId(t.id);
     }
     setJoinPlayerName("");
@@ -486,13 +517,33 @@ export function GameTournamentPlanner() {
 
             <Panel title="Tournaments" icon={<Trophy className="text-accent" />}>
               <div className="space-y-2">
+                <Input
+                  placeholder="Search by name, code or game..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                {!search.trim() && (
+                  <p className="text-xs text-muted-foreground">Showing your tournaments + last 5 public. Use a Tournament ID to load others.</p>
+                )}
                 {loading && <div className="clip-corner border border-primary/20 bg-muted/50 p-4 text-muted-foreground">Loading arena data...</div>}
-                {tournaments.map((tournament) => (
-                  <button key={tournament.id} onClick={() => setSelectedId(tournament.id)} className={`clip-corner w-full border p-3 text-left transition hover:scale-[1.01] ${selectedId === tournament.id ? "border-primary bg-primary/10 shadow-neon" : "border-border bg-panel/70"}`}>
-                    <div className="flex items-center justify-between gap-2"><strong className="font-display text-sm uppercase">{tournament.name}</strong><span className="text-xs text-primary">#{tournament.tournament_code}</span></div>
-                    <p className="text-sm text-muted-foreground">{tournament.game_type} • {tournament.format} • {tournament.status}</p>
-                  </button>
-                ))}
+                {visibleTournaments.map((tournament) => {
+                  const mine = user && tournament.owner_id === user.id;
+                  return (
+                    <button key={tournament.id} onClick={() => setSelectedId(tournament.id)} className={`clip-corner w-full border p-3 text-left transition hover:scale-[1.01] ${selectedId === tournament.id ? "border-primary bg-primary/10 shadow-neon" : "border-border bg-panel/70"}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <strong className="font-display text-sm uppercase">{tournament.name}</strong>
+                        <div className="flex items-center gap-2">
+                          {mine && <span className="rounded border border-accent/60 bg-accent/10 px-1.5 py-0.5 text-[10px] font-display uppercase text-accent">Mine</span>}
+                          <span className="text-xs text-primary">#{tournament.tournament_code}</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{tournament.game_type} • {tournament.format} • {tournament.status}</p>
+                    </button>
+                  );
+                })}
+                {!loading && visibleTournaments.length === 0 && (
+                  <div className="clip-corner border border-border bg-panel/40 p-3 text-sm text-muted-foreground">No tournaments match.</div>
+                )}
               </div>
             </Panel>
           </aside>
