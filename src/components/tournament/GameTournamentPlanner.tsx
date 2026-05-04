@@ -113,6 +113,35 @@ export function GameTournamentPlanner() {
   });
   const [joinCode, setJoinCode] = useState("");
   const [joinPlayerName, setJoinPlayerName] = useState("");
+  const [search, setSearch] = useState("");
+  const [joinedIds, setJoinedIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("joinedTournamentIds") ?? "[]"); } catch { return []; }
+  });
+  const rememberJoined = (id: string) => {
+    setJoinedIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const next = [id, ...prev].slice(0, 50);
+      localStorage.setItem("joinedTournamentIds", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const visibleTournaments = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (q) {
+      return tournaments.filter((t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.tournament_code.toLowerCase().includes(q) ||
+        t.game_type.toLowerCase().includes(q)
+      );
+    }
+    const mine = tournaments.filter((t) => user && t.owner_id === user.id);
+    const joined = tournaments.filter((t) => joinedIds.includes(t.id) && !(user && t.owner_id === user.id));
+    const others = tournaments
+      .filter((t) => !(user && t.owner_id === user.id) && !joinedIds.includes(t.id))
+      .slice(0, 5);
+    return [...mine, ...joined, ...others];
+  }, [tournaments, search, user, joinedIds]);
 
   const selectedTournament = tournaments.find((item) => item.id === selectedId) ?? null;
   const participantMap = useMemo(() => new Map(participants.map((p) => [p.id, p])), [participants]);
