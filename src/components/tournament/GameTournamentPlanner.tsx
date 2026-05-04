@@ -274,6 +274,7 @@ export function GameTournamentPlanner() {
     if (error) return toast({ title: "Lookup failed", description: error.message, variant: "destructive" });
     if (!data) return toast({ title: "Not found", description: `No tournament with ID ${code}.`, variant: "destructive" });
     setTournaments((items) => items.some((t) => t.id === data.id) ? items : [data as Tournament, ...items]);
+    rememberJoined(data.id);
     setSelectedId(data.id);
     setJoinCode("");
     toast({ title: "Tournament loaded", description: data.name });
