@@ -202,11 +202,32 @@ export function GameTournamentPlanner() {
     if (!user) return toast({ title: "Login required", description: "Sign in to create and manage tournaments.", variant: "destructive" });
     const parsed = tournamentSchema.safeParse(form);
     if (!parsed.success) return toast({ title: "Tournament form error", description: parsed.error.issues[0].message, variant: "destructive" });
-    const { data, error } = await db.from("tournaments").insert({ ...parsed.data, owner_id: user.id, status: "Draft", is_public: true }).select().single();
+    const { tournament_code, ...rest } = parsed.data;
+    const customCode = tournament_code?.trim().toUpperCase();
+    if (customCode) {
+      const { data: exists } = await db.from("tournaments").select("id").eq("tournament_code", customCode).maybeSingle();
+      if (exists) return toast({ title: "ID already taken", description: "Pick a different joining ID.", variant: "destructive" });
+    }
+    const insertPayload: any = { ...rest, owner_id: user.id, status: "Draft", is_public: true };
+    if (customCode) insertPayload.tournament_code = customCode;
+    const { data, error } = await db.from("tournaments").insert(insertPayload).select().single();
     if (error) return toast({ title: "Tournament not created", description: error.message, variant: "destructive" });
     setTournaments((items) => [data as Tournament, ...items]);
     setSelectedId(data.id);
+    setForm((f) => ({ ...f, tournament_code: "" }));
     toast({ title: "Tournament ID generated", description: `Share code ${data.tournament_code} is ready.` });
+  };
+
+  const joinTournament = async () => {
+    const code = joinCode.trim().toUpperCase();
+    if (!code) return toast({ title: "Enter an ID", description: "Type a tournament joining ID.", variant: "destructive" });
+    const { data, error } = await db.from("tournaments").select("*").eq("tournament_code", code).maybeSingle();
+    if (error) return toast({ title: "Lookup failed", description: error.message, variant: "destructive" });
+    if (!data) return toast({ title: "Not found", description: `No tournament with ID ${code}.`, variant: "destructive" });
+    setTournaments((items) => items.some((t) => t.id === data.id) ? items : [data as Tournament, ...items]);
+    setSelectedId(data.id);
+    setJoinCode("");
+    toast({ title: "Tournament loaded", description: data.name });
   };
 
   const addParticipants = async () => {
