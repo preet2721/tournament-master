@@ -112,6 +112,7 @@ export function GameTournamentPlanner() {
     tournament_code: "",
   });
   const [joinCode, setJoinCode] = useState("");
+  const [joinPlayerName, setJoinPlayerName] = useState("");
 
   const selectedTournament = tournaments.find((item) => item.id === selectedId) ?? null;
   const participantMap = useMemo(() => new Map(participants.map((p) => [p.id, p])), [participants]);
