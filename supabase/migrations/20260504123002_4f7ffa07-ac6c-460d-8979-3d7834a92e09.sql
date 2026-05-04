@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.owns_tournament(uuid) TO authenticated, anon;
