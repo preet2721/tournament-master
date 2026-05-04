@@ -409,8 +409,27 @@ export function GameTournamentPlanner() {
                     <SelectContent><SelectItem value="Knockout">Knockout</SelectItem><SelectItem value="Round Robin">Round Robin</SelectItem></SelectContent>
                   </Select>
                 </Field>
+                <Field label="Custom Joining ID (optional)">
+                  <Input
+                    value={form.tournament_code}
+                    onChange={(e) => setForm({ ...form, tournament_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16) })}
+                    placeholder="e.g. VALO2026 (auto if empty)"
+                  />
+                </Field>
                 <Button className="w-full" variant="neon" type="submit"><Trophy /> Generate ID</Button>
               </form>
+            </Panel>
+
+            <Panel title="Join Tournament" icon={<Users className="text-accent" />}>
+              <div className="space-y-2">
+                <Input
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  placeholder="Enter tournament ID"
+                  onKeyDown={(e) => { if (e.key === "Enter") joinTournament(); }}
+                />
+                <Button className="w-full" variant="arcade" onClick={joinTournament}><Swords /> Join with ID</Button>
+              </div>
             </Panel>
 
             <Panel title="Tournaments" icon={<Trophy className="text-accent" />}>
