@@ -436,6 +436,7 @@ export function GameTournamentPlanner() {
                   />
                 </Field>
                 <Button className="w-full" variant="neon" type="submit"><Trophy /> Generate ID</Button>
+                <Button className="w-full" variant="arcade" type="button" onClick={loadDemo}><Sparkles /> Load Demo Tournament</Button>
               </form>
             </Panel>
 
