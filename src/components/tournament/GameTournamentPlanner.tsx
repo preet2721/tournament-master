@@ -250,6 +250,28 @@ export function GameTournamentPlanner() {
     toast({ title: "Tournament loaded", description: data.name });
   };
 
+  const registerAsPlayer = async () => {
+    if (!user) return toast({ title: "Sign in required", description: "Please sign in before registering.", variant: "destructive" });
+    const code = joinCode.trim().toUpperCase();
+    const playerName = joinPlayerName.trim();
+    if (!code) return toast({ title: "Enter an ID", description: "Type a tournament joining ID.", variant: "destructive" });
+    if (!playerName) return toast({ title: "Enter your name", description: "Type the player or team name to register.", variant: "destructive" });
+    const { error } = await db.rpc("join_tournament_as_player", {
+      _tournament_code: code,
+      _name: playerName,
+      _team_name: null,
+      _logo_url: null,
+    });
+    if (error) return toast({ title: "Could not register", description: error.message, variant: "destructive" });
+    const { data: t } = await db.from("tournaments").select("*").eq("tournament_code", code).maybeSingle();
+    if (t) {
+      setTournaments((items) => items.some((x) => x.id === t.id) ? items : [t as Tournament, ...items]);
+      setSelectedId(t.id);
+    }
+    setJoinPlayerName("");
+    toast({ title: "Registered!", description: `${playerName} joined the tournament.` });
+  };
+
   const addParticipants = async () => {
     if (!selectedTournament || !isOwner) return;
     const names = bulkNames.split(/[\n,]+/).map((name) => name.trim()).filter(Boolean).slice(0, 64);
