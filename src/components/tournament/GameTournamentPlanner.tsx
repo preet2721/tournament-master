@@ -515,39 +515,6 @@ export function GameTournamentPlanner() {
               </div>
             </Panel>
 
-            <Panel title="Tournaments" icon={<Trophy className="text-accent" />}>
-              <div className="space-y-2">
-                <Input
-                  placeholder="Search by name, code or game..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                {!search.trim() && (
-                  <p className="text-xs text-muted-foreground">Showing your tournaments + last 5 public. Use a Tournament ID to load others.</p>
-                )}
-                {loading && <div className="clip-corner border border-primary/20 bg-muted/50 p-4 text-muted-foreground">Loading arena data...</div>}
-                <div className="max-h-[420px] space-y-2 overflow-y-auto pr-1 scrollbar-thin">
-                {visibleTournaments.map((tournament) => {
-                  const mine = user && tournament.owner_id === user.id;
-                  return (
-                    <button key={tournament.id} onClick={() => setSelectedId(tournament.id)} className={`clip-corner w-full border p-3 text-left transition hover:scale-[1.01] ${selectedId === tournament.id ? "border-primary bg-primary/10 shadow-neon" : "border-border bg-panel/70"}`}>
-                      <div className="flex items-center justify-between gap-2">
-                        <strong className="font-display text-sm uppercase">{tournament.name}</strong>
-                        <div className="flex items-center gap-2">
-                          {mine && <span className="rounded border border-accent/60 bg-accent/10 px-1.5 py-0.5 text-[10px] font-display uppercase text-accent">Mine</span>}
-                          <span className="text-xs text-primary">#{tournament.tournament_code}</span>
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{tournament.game_type} • {tournament.format} • {tournament.status}</p>
-                    </button>
-                  );
-                })}
-                {!loading && visibleTournaments.length === 0 && (
-                  <div className="clip-corner border border-border bg-panel/40 p-3 text-sm text-muted-foreground">No tournaments match.</div>
-                )}
-                </div>
-              </div>
-            </Panel>
           </aside>
 
           <section className="space-y-5">
@@ -573,6 +540,40 @@ export function GameTournamentPlanner() {
             )}
           </section>
         </div>
+
+        <Panel title="Tournaments" icon={<Trophy className="text-accent" />}>
+          <div className="space-y-3">
+            <Input
+              placeholder="Search by name, code or game..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {!search.trim() && (
+              <p className="text-xs text-muted-foreground">Showing your tournaments + last 5 public. Use a Tournament ID to load others.</p>
+            )}
+            {loading && <div className="clip-corner border border-primary/20 bg-muted/50 p-4 text-muted-foreground">Loading arena data...</div>}
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {visibleTournaments.map((tournament) => {
+                const mine = user && tournament.owner_id === user.id;
+                return (
+                  <button key={tournament.id} onClick={() => setSelectedId(tournament.id)} className={`clip-corner w-full border p-3 text-left transition hover:scale-[1.01] ${selectedId === tournament.id ? "border-primary bg-primary/10 shadow-neon" : "border-border bg-panel/70"}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <strong className="font-display text-sm uppercase">{tournament.name}</strong>
+                      <div className="flex items-center gap-2">
+                        {mine && <span className="rounded border border-accent/60 bg-accent/10 px-1.5 py-0.5 text-[10px] font-display uppercase text-accent">Mine</span>}
+                        <span className="text-xs text-primary">#{tournament.tournament_code}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{tournament.game_type} • {tournament.format} • {tournament.status}</p>
+                  </button>
+                );
+              })}
+            </div>
+            {!loading && visibleTournaments.length === 0 && (
+              <div className="clip-corner border border-border bg-panel/40 p-3 text-sm text-muted-foreground">No tournaments match.</div>
+            )}
+          </div>
+        </Panel>
       </section>
     </main>
   );
