@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Trophy, Users, Swords, Timer, Share2, FileDown, Sparkles, Trash2, Pencil, Plus, ShieldCheck, LogOut } from "lucide-react";
+import { Trophy, Users, Swords, Timer, Share2, FileDown, Sparkles, Trash2, Pencil, Plus, ShieldCheck, LogOut, RotateCcw, ShieldAlert } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
