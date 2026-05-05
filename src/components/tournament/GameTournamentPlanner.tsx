@@ -495,6 +495,10 @@ export function GameTournamentPlanner() {
             <h1 className="font-display text-4xl font-black uppercase leading-tight md:text-6xl">Neon bracket command center</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {isAdmin && <span className="clip-corner border border-accent/60 bg-accent/10 px-2 py-1 font-display text-[11px] uppercase text-accent flex items-center gap-1"><ShieldAlert className="h-3 w-3" /> Admin</span>}
+            {selectedTournament && canManage && (
+              <DeleteTournamentButton tournament={selectedTournament} onConfirm={() => softDeleteTournament(selectedTournament)} />
+            )}
             {selectedTournament && <Button variant="arcade" onClick={shareTournament}><Share2 /> Share</Button>}
             {selectedTournament && <Button variant="arcade" onClick={exportResults}><FileDown /> PDF</Button>}
             {user ? <Button variant="arcade" onClick={() => supabase.auth.signOut()}><LogOut /> Logout</Button> : null}
