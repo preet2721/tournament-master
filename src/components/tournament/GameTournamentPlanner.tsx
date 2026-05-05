@@ -204,7 +204,7 @@ export function GameTournamentPlanner() {
   const loadTournaments = async (showLoader = true) => {
     if (showLoader) setLoading(true);
     const code = new URLSearchParams(window.location.search).get("code");
-    const query = code ? db.from("tournaments").select("*").eq("tournament_code", code) : db.from("tournaments").select("*").order("created_at", { ascending: false }).limit(20);
+    const query = code ? db.from("tournaments").select("*").eq("tournament_code", code) : db.from("tournaments").select("*").order("created_at", { ascending: false }).limit(50);
     const { data, error } = await query;
     if (error) toast({ title: "Could not load tournaments", description: error.message, variant: "destructive" });
     const rows = (data ?? []) as Tournament[];
