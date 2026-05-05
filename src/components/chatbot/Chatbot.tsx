@@ -132,7 +132,7 @@ export const Chatbot = () => {
       {/* Chat panel */}
       <div
         className={cn(
-          "fixed bottom-24 right-6 z-50 w-[min(380px,calc(100vw-2rem))] h-[min(560px,calc(100vh-8rem))] flex flex-col rounded-lg border border-primary/40 bg-panel shadow-neon transition-all origin-bottom-right",
+          "fixed bottom-24 right-6 z-50 w-[min(380px,calc(100vw-2rem))] max-h-[calc(100vh-7rem)] h-[520px] flex flex-col rounded-lg border border-primary/40 bg-panel shadow-neon transition-all origin-bottom-right",
           open ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0",
         )}
       >

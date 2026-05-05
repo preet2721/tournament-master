@@ -526,6 +526,7 @@ export function GameTournamentPlanner() {
                   <p className="text-xs text-muted-foreground">Showing your tournaments + last 5 public. Use a Tournament ID to load others.</p>
                 )}
                 {loading && <div className="clip-corner border border-primary/20 bg-muted/50 p-4 text-muted-foreground">Loading arena data...</div>}
+                <div className="max-h-[420px] space-y-2 overflow-y-auto pr-1 scrollbar-thin">
                 {visibleTournaments.map((tournament) => {
                   const mine = user && tournament.owner_id === user.id;
                   return (
@@ -544,6 +545,7 @@ export function GameTournamentPlanner() {
                 {!loading && visibleTournaments.length === 0 && (
                   <div className="clip-corner border border-border bg-panel/40 p-3 text-sm text-muted-foreground">No tournaments match.</div>
                 )}
+                </div>
               </div>
             </Panel>
           </aside>
