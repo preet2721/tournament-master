@@ -131,21 +131,24 @@ export function GameTournamentPlanner() {
   };
 
   const visibleTournaments = useMemo(() => {
+    const inBin = view === "bin";
+    const base = tournaments.filter((t) => inBin ? !!t.deleted_at : !t.deleted_at);
     const q = search.trim().toLowerCase();
     if (q) {
-      return tournaments.filter((t) =>
+      return base.filter((t) =>
         t.name.toLowerCase().includes(q) ||
         t.tournament_code.toLowerCase().includes(q) ||
         t.game_type.toLowerCase().includes(q)
       );
     }
-    const mine = tournaments.filter((t) => user && t.owner_id === user.id);
-    const joined = tournaments.filter((t) => joinedIds.includes(t.id) && !(user && t.owner_id === user.id));
-    const others = tournaments
+    if (inBin) return base;
+    const mine = base.filter((t) => user && t.owner_id === user.id);
+    const joined = base.filter((t) => joinedIds.includes(t.id) && !(user && t.owner_id === user.id));
+    const others = base
       .filter((t) => !(user && t.owner_id === user.id) && !joinedIds.includes(t.id))
       .slice(0, 5);
     return [...mine, ...joined, ...others];
-  }, [tournaments, search, user, joinedIds]);
+  }, [tournaments, search, user, joinedIds, view]);
 
   const selectedTournament = tournaments.find((item) => item.id === selectedId) ?? null;
   const participantMap = useMemo(() => new Map(participants.map((p) => [p.id, p])), [participants]);
