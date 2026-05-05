@@ -29,6 +29,7 @@ type Tournament = {
   match_duration_minutes: number;
   is_public: boolean;
   created_at: string;
+  deleted_at: string | null;
 };
 
 type Participant = {
