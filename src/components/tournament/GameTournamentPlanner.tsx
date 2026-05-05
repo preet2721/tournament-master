@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Trophy, Users, Swords, Timer, Share2, FileDown, Sparkles, Trash2, Pencil, Plus, ShieldCheck, LogOut } from "lucide-react";
+import { Trophy, Users, Swords, Timer, Share2, FileDown, Sparkles, Trash2, Pencil, Plus, ShieldCheck, LogOut, RotateCcw, ShieldAlert } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ type Tournament = {
   match_duration_minutes: number;
   is_public: boolean;
   created_at: string;
+  deleted_at: string | null;
 };
 
 type Participant = {
@@ -114,6 +116,8 @@ export function GameTournamentPlanner() {
   const [joinCode, setJoinCode] = useState("");
   const [joinPlayerName, setJoinPlayerName] = useState("");
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<"active" | "bin">("active");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [joinedIds, setJoinedIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("joinedTournamentIds") ?? "[]"); } catch { return []; }
   });
@@ -127,26 +131,30 @@ export function GameTournamentPlanner() {
   };
 
   const visibleTournaments = useMemo(() => {
+    const inBin = view === "bin";
+    const base = tournaments.filter((t) => inBin ? !!t.deleted_at : !t.deleted_at);
     const q = search.trim().toLowerCase();
     if (q) {
-      return tournaments.filter((t) =>
+      return base.filter((t) =>
         t.name.toLowerCase().includes(q) ||
         t.tournament_code.toLowerCase().includes(q) ||
         t.game_type.toLowerCase().includes(q)
       );
     }
-    const mine = tournaments.filter((t) => user && t.owner_id === user.id);
-    const joined = tournaments.filter((t) => joinedIds.includes(t.id) && !(user && t.owner_id === user.id));
-    const others = tournaments
+    if (inBin) return base;
+    const mine = base.filter((t) => user && t.owner_id === user.id);
+    const joined = base.filter((t) => joinedIds.includes(t.id) && !(user && t.owner_id === user.id));
+    const others = base
       .filter((t) => !(user && t.owner_id === user.id) && !joinedIds.includes(t.id))
       .slice(0, 5);
     return [...mine, ...joined, ...others];
-  }, [tournaments, search, user, joinedIds]);
+  }, [tournaments, search, user, joinedIds, view]);
 
   const selectedTournament = tournaments.find((item) => item.id === selectedId) ?? null;
   const participantMap = useMemo(() => new Map(participants.map((p) => [p.id, p])), [participants]);
   const champion = selectedTournament?.champion_participant_id ? participantMap.get(selectedTournament.champion_participant_id) : null;
   const isOwner = Boolean(user && selectedTournament && selectedTournament.owner_id === user.id);
+  const canManage = isOwner || isAdmin;
 
   const standings = useMemo(() => [...participants].sort((a, b) => b.points - a.points || b.wins - a.wins || b.score_for - b.score_against - (a.score_for - a.score_against)), [participants]);
   const rounds = useMemo(() => {
@@ -171,6 +179,12 @@ export function GameTournamentPlanner() {
 
   useEffect(() => {
     loadTournaments();
+    if (user?.id) {
+      db.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle()
+        .then(({ data }: any) => setIsAdmin(!!data));
+    } else {
+      setIsAdmin(false);
+    }
   }, [user?.id]);
 
   useEffect(() => {
@@ -190,7 +204,7 @@ export function GameTournamentPlanner() {
   const loadTournaments = async (showLoader = true) => {
     if (showLoader) setLoading(true);
     const code = new URLSearchParams(window.location.search).get("code");
-    const query = code ? db.from("tournaments").select("*").eq("tournament_code", code) : db.from("tournaments").select("*").order("created_at", { ascending: false }).limit(20);
+    const query = code ? db.from("tournaments").select("*").eq("tournament_code", code) : db.from("tournaments").select("*").order("created_at", { ascending: false }).limit(50);
     const { data, error } = await query;
     if (error) toast({ title: "Could not load tournaments", description: error.message, variant: "destructive" });
     const rows = (data ?? []) as Tournament[];
@@ -436,6 +450,34 @@ export function GameTournamentPlanner() {
     printWindow?.print();
   };
 
+  const canManageTournament = (t: Tournament) => Boolean(user && (t.owner_id === user.id || isAdmin));
+
+  const softDeleteTournament = async (t: Tournament) => {
+    if (!canManageTournament(t)) return;
+    const { error } = await db.rpc("soft_delete_tournament", { _tournament_id: t.id });
+    if (error) return toast({ title: "Could not move to bin", description: error.message, variant: "destructive" });
+    toast({ title: "Moved to Bin", description: `${t.name} can be restored from the Bin.` });
+    if (selectedId === t.id) setSelectedId(null);
+    await loadTournaments(false);
+  };
+
+  const restoreTournament = async (t: Tournament) => {
+    if (!canManageTournament(t)) return;
+    const { error } = await db.rpc("restore_tournament", { _tournament_id: t.id });
+    if (error) return toast({ title: "Restore failed", description: error.message, variant: "destructive" });
+    toast({ title: "Restored", description: t.name });
+    await loadTournaments(false);
+  };
+
+  const purgeTournament = async (t: Tournament) => {
+    if (!canManageTournament(t)) return;
+    const { error } = await db.rpc("purge_tournament", { _tournament_id: t.id });
+    if (error) return toast({ title: "Purge failed", description: error.message, variant: "destructive" });
+    toast({ title: "Permanently deleted", description: t.name });
+    if (selectedId === t.id) setSelectedId(null);
+    await loadTournaments(false);
+  };
+
   const activeMatch = matches.find((m) => m.status !== "Completed" && m.scheduled_at);
   const countdownSeconds = activeMatch?.scheduled_at ? Math.floor((new Date(activeMatch.scheduled_at).getTime() - now) / 1000) : 0;
 
@@ -453,6 +495,10 @@ export function GameTournamentPlanner() {
             <h1 className="font-display text-4xl font-black uppercase leading-tight md:text-6xl">Neon bracket command center</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {isAdmin && <span className="clip-corner border border-accent/60 bg-accent/10 px-2 py-1 font-display text-[11px] uppercase text-accent flex items-center gap-1"><ShieldAlert className="h-3 w-3" /> Admin</span>}
+            {selectedTournament && canManage && (
+              <DeleteTournamentButton tournament={selectedTournament} onConfirm={() => softDeleteTournament(selectedTournament)} />
+            )}
             {selectedTournament && <Button variant="arcade" onClick={shareTournament}><Share2 /> Share</Button>}
             {selectedTournament && <Button variant="arcade" onClick={exportResults}><FileDown /> PDF</Button>}
             {user ? <Button variant="arcade" onClick={() => supabase.auth.signOut()}><LogOut /> Logout</Button> : null}
@@ -541,36 +587,62 @@ export function GameTournamentPlanner() {
           </section>
         </div>
 
-        <Panel title="Tournaments" icon={<Trophy className="text-accent" />}>
+        <Panel title={view === "bin" ? "Bin" : "Tournaments"} icon={view === "bin" ? <Trash2 className="text-destructive" /> : <Trophy className="text-accent" />}>
           <div className="space-y-3">
-            <Input
-              placeholder="Search by name, code or game..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {!search.trim() && (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="clip-corner inline-flex border border-primary/20 bg-panel/80 p-1">
+                <button onClick={() => setView("active")} className={`px-3 py-1 text-xs font-display uppercase ${view === "active" ? "bg-primary/20 text-primary" : "text-muted-foreground"}`}>Active</button>
+                <button onClick={() => setView("bin")} className={`px-3 py-1 text-xs font-display uppercase flex items-center gap-1 ${view === "bin" ? "bg-destructive/20 text-destructive" : "text-muted-foreground"}`}><Trash2 className="h-3 w-3" /> Bin</button>
+              </div>
+              <Input
+                className="flex-1 min-w-[180px]"
+                placeholder="Search by name, code or game..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            {!search.trim() && view === "active" && (
               <p className="text-xs text-muted-foreground">Showing your tournaments + last 5 public. Use a Tournament ID to load others.</p>
+            )}
+            {view === "bin" && (
+              <p className="text-xs text-muted-foreground">Deleted tournaments. {isAdmin ? "As admin you can restore or permanently delete any." : "Restore or permanently delete the ones you own."}</p>
             )}
             {loading && <div className="clip-corner border border-primary/20 bg-muted/50 p-4 text-muted-foreground">Loading arena data...</div>}
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {visibleTournaments.map((tournament) => {
                 const mine = user && tournament.owner_id === user.id;
+                const manageable = canManageTournament(tournament);
                 return (
-                  <button key={tournament.id} onClick={() => setSelectedId(tournament.id)} className={`clip-corner w-full border p-3 text-left transition hover:scale-[1.01] ${selectedId === tournament.id ? "border-primary bg-primary/10 shadow-neon" : "border-border bg-panel/70"}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <strong className="font-display text-sm uppercase">{tournament.name}</strong>
-                      <div className="flex items-center gap-2">
-                        {mine && <span className="rounded border border-accent/60 bg-accent/10 px-1.5 py-0.5 text-[10px] font-display uppercase text-accent">Mine</span>}
-                        <span className="text-xs text-primary">#{tournament.tournament_code}</span>
+                  <div key={tournament.id} className={`clip-corner w-full border p-3 text-left transition ${selectedId === tournament.id ? "border-primary bg-primary/10 shadow-neon" : "border-border bg-panel/70"}`}>
+                    <button onClick={() => setSelectedId(tournament.id)} className="block w-full text-left">
+                      <div className="flex items-center justify-between gap-2">
+                        <strong className="font-display text-sm uppercase">{tournament.name}</strong>
+                        <div className="flex items-center gap-2">
+                          {mine && <span className="rounded border border-accent/60 bg-accent/10 px-1.5 py-0.5 text-[10px] font-display uppercase text-accent">Mine</span>}
+                          {!mine && isAdmin && <span className="rounded border border-destructive/60 bg-destructive/10 px-1.5 py-0.5 text-[10px] font-display uppercase text-destructive">Admin</span>}
+                          <span className="text-xs text-primary">#{tournament.tournament_code}</span>
+                        </div>
                       </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{tournament.game_type} • {tournament.format} • {tournament.status}</p>
-                  </button>
+                      <p className="text-sm text-muted-foreground">{tournament.game_type} • {tournament.format} • {tournament.status}</p>
+                    </button>
+                    {manageable && (
+                      <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border/50 pt-2">
+                        {view === "active" ? (
+                          <DeleteTournamentButton tournament={tournament} onConfirm={() => softDeleteTournament(tournament)} compact />
+                        ) : (
+                          <>
+                            <Button size="sm" variant="arcade" onClick={() => restoreTournament(tournament)}><RotateCcw className="h-3 w-3" /> Restore</Button>
+                            <PurgeTournamentButton tournament={tournament} onConfirm={() => purgeTournament(tournament)} />
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
             {!loading && visibleTournaments.length === 0 && (
-              <div className="clip-corner border border-border bg-panel/40 p-3 text-sm text-muted-foreground">No tournaments match.</div>
+              <div className="clip-corner border border-border bg-panel/40 p-3 text-sm text-muted-foreground">{view === "bin" ? "Bin is empty." : "No tournaments match."}</div>
             )}
           </div>
         </Panel>
@@ -630,4 +702,44 @@ function ScoreRow({ match, participantMap, updateScore, canEdit }: any) {
 
 function StandingsPanel({ standings }: { standings: Participant[] }) {
   return <Panel title="Leaderboard / Points Table" icon={<Trophy className="text-accent" />}><div className="overflow-x-auto"><table className="w-full min-w-[640px] text-left"><thead className="text-xs uppercase text-muted-foreground"><tr><th className="p-3">Rank</th><th>Competitor</th><th>Pts</th><th>W</th><th>L</th><th>D</th><th>Diff</th></tr></thead><tbody>{standings.map((p, index) => <tr key={p.id} className="border-t border-border"><td className="p-3 font-display text-primary">#{index + 1}</td><td>{p.name}</td><td>{p.points}</td><td>{p.wins}</td><td>{p.losses}</td><td>{p.draws}</td><td>{p.score_for - p.score_against}</td></tr>)}</tbody></table></div></Panel>;
+}
+
+function DeleteTournamentButton({ tournament, onConfirm, compact }: { tournament: Tournament; onConfirm: () => void; compact?: boolean }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="arcade" size={compact ? "sm" : "default"} className="text-destructive border-destructive/50 hover:bg-destructive/10"><Trash2 className={compact ? "h-3 w-3" : undefined} /> {compact ? "Delete" : "Delete"}</Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Move "{tournament.name}" to Bin?</AlertDialogTitle>
+          <AlertDialogDescription>It will be hidden from the active list. You can restore or permanently delete it from the Bin.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>Move to Bin</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function PurgeTournamentButton({ tournament, onConfirm }: { tournament: Tournament; onConfirm: () => void }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="arcade" size="sm" className="text-destructive border-destructive/50 hover:bg-destructive/10"><Trash2 className="h-3 w-3" /> Delete forever</Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Permanently delete "{tournament.name}"?</AlertDialogTitle>
+          <AlertDialogDescription>This cannot be undone. All participants and matches will be wiped.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>Permanently delete</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }

@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_emails: {
+        Row: {
+          email: string
+        }
+        Insert: {
+          email: string
+        }
+        Update: {
+          email?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           bracket_slot: string | null
@@ -157,6 +169,8 @@ export type Database = {
         Row: {
           champion_participant_id: string | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           format: Database["public"]["Enums"]["tournament_format"]
           game_type: string
           id: string
@@ -172,6 +186,8 @@ export type Database = {
         Insert: {
           champion_participant_id?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           format: Database["public"]["Enums"]["tournament_format"]
           game_type: string
           id?: string
@@ -187,6 +203,8 @@ export type Database = {
         Update: {
           champion_participant_id?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           format?: Database["public"]["Enums"]["tournament_format"]
           game_type?: string
           id?: string
@@ -201,11 +219,40 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: never; Returns: boolean }
       join_tournament_as_player: {
         Args: {
           _logo_url?: string
@@ -237,8 +284,18 @@ export type Database = {
         }
       }
       owns_tournament: { Args: { _tournament_id: string }; Returns: boolean }
+      purge_tournament: { Args: { _tournament_id: string }; Returns: undefined }
+      restore_tournament: {
+        Args: { _tournament_id: string }
+        Returns: undefined
+      }
+      soft_delete_tournament: {
+        Args: { _tournament_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
+      app_role: "admin" | "user"
       match_status: "Scheduled" | "Live" | "Completed"
       tournament_format: "Knockout" | "Round Robin"
       tournament_status: "Draft" | "Live" | "Completed"
@@ -369,6 +426,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "user"],
       match_status: ["Scheduled", "Live", "Completed"],
       tournament_format: ["Knockout", "Round Robin"],
       tournament_status: ["Draft", "Live", "Completed"],
