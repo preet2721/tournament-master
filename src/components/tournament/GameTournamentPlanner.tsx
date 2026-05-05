@@ -116,6 +116,8 @@ export function GameTournamentPlanner() {
   const [joinCode, setJoinCode] = useState("");
   const [joinPlayerName, setJoinPlayerName] = useState("");
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<"active" | "bin">("active");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [joinedIds, setJoinedIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("joinedTournamentIds") ?? "[]"); } catch { return []; }
   });
