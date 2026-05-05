@@ -477,6 +477,8 @@ export function GameTournamentPlanner() {
     if (selectedId === t.id) setSelectedId(null);
     await loadTournaments(false);
   };
+
+  const activeMatch = matches.find((m) => m.status !== "Completed" && m.scheduled_at);
   const countdownSeconds = activeMatch?.scheduled_at ? Math.floor((new Date(activeMatch.scheduled_at).getTime() - now) / 1000) : 0;
 
   return (
