@@ -179,6 +179,12 @@ export function GameTournamentPlanner() {
 
   useEffect(() => {
     loadTournaments();
+    if (user?.id) {
+      db.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle()
+        .then(({ data }: any) => setIsAdmin(!!data));
+    } else {
+      setIsAdmin(false);
+    }
   }, [user?.id]);
 
   useEffect(() => {
