@@ -154,6 +154,7 @@ export function GameTournamentPlanner() {
   const participantMap = useMemo(() => new Map(participants.map((p) => [p.id, p])), [participants]);
   const champion = selectedTournament?.champion_participant_id ? participantMap.get(selectedTournament.champion_participant_id) : null;
   const isOwner = Boolean(user && selectedTournament && selectedTournament.owner_id === user.id);
+  const canManage = isOwner || isAdmin;
 
   const standings = useMemo(() => [...participants].sort((a, b) => b.points - a.points || b.wins - a.wins || b.score_for - b.score_against - (a.score_for - a.score_against)), [participants]);
   const rounds = useMemo(() => {
