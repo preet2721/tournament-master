@@ -545,6 +545,7 @@ export function GameTournamentPlanner() {
                 {!loading && visibleTournaments.length === 0 && (
                   <div className="clip-corner border border-border bg-panel/40 p-3 text-sm text-muted-foreground">No tournaments match.</div>
                 )}
+                </div>
               </div>
             </Panel>
           </aside>
