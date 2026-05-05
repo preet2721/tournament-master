@@ -703,3 +703,43 @@ function ScoreRow({ match, participantMap, updateScore, canEdit }: any) {
 function StandingsPanel({ standings }: { standings: Participant[] }) {
   return <Panel title="Leaderboard / Points Table" icon={<Trophy className="text-accent" />}><div className="overflow-x-auto"><table className="w-full min-w-[640px] text-left"><thead className="text-xs uppercase text-muted-foreground"><tr><th className="p-3">Rank</th><th>Competitor</th><th>Pts</th><th>W</th><th>L</th><th>D</th><th>Diff</th></tr></thead><tbody>{standings.map((p, index) => <tr key={p.id} className="border-t border-border"><td className="p-3 font-display text-primary">#{index + 1}</td><td>{p.name}</td><td>{p.points}</td><td>{p.wins}</td><td>{p.losses}</td><td>{p.draws}</td><td>{p.score_for - p.score_against}</td></tr>)}</tbody></table></div></Panel>;
 }
+
+function DeleteTournamentButton({ tournament, onConfirm, compact }: { tournament: Tournament; onConfirm: () => void; compact?: boolean }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="arcade" size={compact ? "sm" : "default"} className="text-destructive border-destructive/50 hover:bg-destructive/10"><Trash2 className={compact ? "h-3 w-3" : undefined} /> {compact ? "Delete" : "Delete"}</Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Move "{tournament.name}" to Bin?</AlertDialogTitle>
+          <AlertDialogDescription>It will be hidden from the active list. You can restore or permanently delete it from the Bin.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>Move to Bin</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function PurgeTournamentButton({ tournament, onConfirm }: { tournament: Tournament; onConfirm: () => void }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="arcade" size="sm" className="text-destructive border-destructive/50 hover:bg-destructive/10"><Trash2 className="h-3 w-3" /> Delete forever</Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Permanently delete "{tournament.name}"?</AlertDialogTitle>
+          <AlertDialogDescription>This cannot be undone. All participants and matches will be wiped.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>Permanently delete</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
