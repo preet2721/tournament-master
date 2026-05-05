@@ -450,7 +450,33 @@ export function GameTournamentPlanner() {
     printWindow?.print();
   };
 
-  const activeMatch = matches.find((m) => m.status !== "Completed" && m.scheduled_at);
+  const canManageTournament = (t: Tournament) => Boolean(user && (t.owner_id === user.id || isAdmin));
+
+  const softDeleteTournament = async (t: Tournament) => {
+    if (!canManageTournament(t)) return;
+    const { error } = await db.rpc("soft_delete_tournament", { _tournament_id: t.id });
+    if (error) return toast({ title: "Could not move to bin", description: error.message, variant: "destructive" });
+    toast({ title: "Moved to Bin", description: `${t.name} can be restored from the Bin.` });
+    if (selectedId === t.id) setSelectedId(null);
+    await loadTournaments(false);
+  };
+
+  const restoreTournament = async (t: Tournament) => {
+    if (!canManageTournament(t)) return;
+    const { error } = await db.rpc("restore_tournament", { _tournament_id: t.id });
+    if (error) return toast({ title: "Restore failed", description: error.message, variant: "destructive" });
+    toast({ title: "Restored", description: t.name });
+    await loadTournaments(false);
+  };
+
+  const purgeTournament = async (t: Tournament) => {
+    if (!canManageTournament(t)) return;
+    const { error } = await db.rpc("purge_tournament", { _tournament_id: t.id });
+    if (error) return toast({ title: "Purge failed", description: error.message, variant: "destructive" });
+    toast({ title: "Permanently deleted", description: t.name });
+    if (selectedId === t.id) setSelectedId(null);
+    await loadTournaments(false);
+  };
   const countdownSeconds = activeMatch?.scheduled_at ? Math.floor((new Date(activeMatch.scheduled_at).getTime() - now) / 1000) : 0;
 
   return (
