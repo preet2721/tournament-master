@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 
 type Format = "Knockout" | "Round Robin";
+type Mode = "Solo" | "Team";
 type TournamentStatus = "Draft" | "Live" | "Completed";
 type MatchStatus = "Scheduled" | "Live" | "Completed";
 
@@ -22,6 +23,7 @@ type Tournament = {
   name: string;
   game_type: string;
   format: Format;
+  mode: Mode;
   participant_target: number;
   tournament_code: string;
   status: TournamentStatus;
@@ -30,6 +32,13 @@ type Tournament = {
   is_public: boolean;
   created_at: string;
   deleted_at: string | null;
+};
+
+type TeamPlayer = {
+  id: string;
+  participant_id: string;
+  name: string;
+  role: string | null;
 };
 
 type Participant = {
