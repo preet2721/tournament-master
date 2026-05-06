@@ -667,7 +667,7 @@ export function GameTournamentPlanner() {
                           <span className="text-xs text-primary">#{tournament.tournament_code}</span>
                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground">{tournament.game_type} • {tournament.format} • {tournament.status}</p>
+                      <p className="text-sm text-muted-foreground">{tournament.game_type} • {tournament.format} • {tournament.mode ?? "Solo"} • {tournament.status}</p>
                     </button>
                     {manageable && (
                       <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border/50 pt-2">
