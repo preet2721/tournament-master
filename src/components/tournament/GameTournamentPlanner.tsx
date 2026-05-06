@@ -533,12 +533,20 @@ export function GameTournamentPlanner() {
                   <Field label="Players"><Input type="number" min={2} max={64} value={form.participant_target} onChange={(e) => setForm({ ...form, participant_target: Number(e.target.value) })} /></Field>
                   <Field label="Minutes"><Input type="number" min={5} max={240} value={form.match_duration_minutes} onChange={(e) => setForm({ ...form, match_duration_minutes: Number(e.target.value) })} /></Field>
                 </div>
-                <Field label="Format">
-                  <Select value={form.format} onValueChange={(value: Format) => setForm({ ...form, format: value })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="Knockout">Knockout</SelectItem><SelectItem value="Round Robin">Round Robin</SelectItem></SelectContent>
-                  </Select>
-                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Format">
+                    <Select value={form.format} onValueChange={(value: Format) => setForm({ ...form, format: value })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="Knockout">Knockout</SelectItem><SelectItem value="Round Robin">Round Robin</SelectItem></SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Mode">
+                    <Select value={form.mode} onValueChange={(value: Mode) => setForm({ ...form, mode: value })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="Solo">Solo (1v1)</SelectItem><SelectItem value="Team">Team vs Team</SelectItem></SelectContent>
+                    </Select>
+                  </Field>
+                </div>
                 <Field label="Custom Joining ID (optional)">
                   <Input
                     value={form.tournament_code}
