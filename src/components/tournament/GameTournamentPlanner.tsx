@@ -80,6 +80,7 @@ const tournamentSchema = z.object({
   game_type: z.string().trim().min(2, "Game type is required").max(40),
   participant_target: z.coerce.number().int().min(2).max(64),
   format: z.enum(["Knockout", "Round Robin"]),
+  mode: z.enum(["Solo", "Team"]),
   match_duration_minutes: z.coerce.number().int().min(5).max(240),
   tournament_code: z.string().trim().regex(/^[A-Z0-9]{4,16}$/i, "Use 4-16 letters or numbers").optional().or(z.literal("")),
 });
