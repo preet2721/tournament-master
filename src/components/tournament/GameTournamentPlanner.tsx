@@ -120,6 +120,7 @@ export function GameTournamentPlanner() {
     game_type: "Valorant",
     participant_target: 4,
     format: "Knockout" as Format,
+    mode: "Solo" as Mode,
     match_duration_minutes: 30,
     tournament_code: "",
   });
