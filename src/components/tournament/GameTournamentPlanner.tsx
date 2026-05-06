@@ -108,6 +108,7 @@ export function GameTournamentPlanner() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [teamPlayers, setTeamPlayers] = useState<TeamPlayer[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [bulkNames, setBulkNames] = useState("Team A\nTeam B\nTeam C\nTeam D");
