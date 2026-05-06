@@ -232,8 +232,32 @@ export function GameTournamentPlanner() {
     ]);
     if (playersRes.error && showErrors) toast({ title: "Roster failed", description: playersRes.error.message, variant: "destructive" });
     if (matchesRes.error && showErrors) toast({ title: "Matches failed", description: matchesRes.error.message, variant: "destructive" });
-    setParticipants((playersRes.data ?? []) as Participant[]);
+    const players = (playersRes.data ?? []) as Participant[];
+    setParticipants(players);
     setMatches((matchesRes.data ?? []) as Match[]);
+    if (players.length) {
+      const ids = players.map((p) => p.id);
+      const { data: tp } = await db.from("team_players").select("*").in("participant_id", ids);
+      setTeamPlayers((tp ?? []) as TeamPlayer[]);
+    } else {
+      setTeamPlayers([]);
+    }
+  };
+
+  const addTeamPlayer = async (participantId: string, name: string, role: string) => {
+    if (!isOwner) return;
+    const clean = name.trim();
+    if (!clean) return toast({ title: "Player name required", variant: "destructive" });
+    const { error } = await db.from("team_players").insert({ participant_id: participantId, name: clean, role: role.trim() || null });
+    if (error) return toast({ title: "Could not add player", description: error.message, variant: "destructive" });
+    if (selectedTournament) await loadTournamentData(selectedTournament.id, false);
+  };
+
+  const removeTeamPlayer = async (id: string) => {
+    if (!isOwner) return;
+    const { error } = await db.from("team_players").delete().eq("id", id);
+    if (error) return toast({ title: "Could not remove player", description: error.message, variant: "destructive" });
+    if (selectedTournament) await loadTournamentData(selectedTournament.id, false);
   };
 
   const handleAuth = async (event: FormEvent) => {
