@@ -165,6 +165,38 @@ export type Database = {
           },
         ]
       }
+      team_players: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          participant_id: string
+          role: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          participant_id: string
+          role?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          participant_id?: string
+          role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_players_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournaments: {
         Row: {
           champion_participant_id: string | null
@@ -176,6 +208,7 @@ export type Database = {
           id: string
           is_public: boolean
           match_duration_minutes: number
+          mode: Database["public"]["Enums"]["tournament_mode"]
           name: string
           owner_id: string
           participant_target: number
@@ -193,6 +226,7 @@ export type Database = {
           id?: string
           is_public?: boolean
           match_duration_minutes?: number
+          mode?: Database["public"]["Enums"]["tournament_mode"]
           name: string
           owner_id?: string
           participant_target?: number
@@ -210,6 +244,7 @@ export type Database = {
           id?: string
           is_public?: boolean
           match_duration_minutes?: number
+          mode?: Database["public"]["Enums"]["tournament_mode"]
           name?: string
           owner_id?: string
           participant_target?: number
@@ -298,6 +333,7 @@ export type Database = {
       app_role: "admin" | "user"
       match_status: "Scheduled" | "Live" | "Completed"
       tournament_format: "Knockout" | "Round Robin"
+      tournament_mode: "Solo" | "Team"
       tournament_status: "Draft" | "Live" | "Completed"
     }
     CompositeTypes: {
@@ -429,6 +465,7 @@ export const Constants = {
       app_role: ["admin", "user"],
       match_status: ["Scheduled", "Live", "Completed"],
       tournament_format: ["Knockout", "Round Robin"],
+      tournament_mode: ["Solo", "Team"],
       tournament_status: ["Draft", "Live", "Completed"],
     },
   },
