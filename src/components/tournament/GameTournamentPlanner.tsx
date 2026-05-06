@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 
 type Format = "Knockout" | "Round Robin";
+type Mode = "Solo" | "Team";
 type TournamentStatus = "Draft" | "Live" | "Completed";
 type MatchStatus = "Scheduled" | "Live" | "Completed";
 
@@ -22,6 +23,7 @@ type Tournament = {
   name: string;
   game_type: string;
   format: Format;
+  mode: Mode;
   participant_target: number;
   tournament_code: string;
   status: TournamentStatus;
@@ -30,6 +32,13 @@ type Tournament = {
   is_public: boolean;
   created_at: string;
   deleted_at: string | null;
+};
+
+type TeamPlayer = {
+  id: string;
+  participant_id: string;
+  name: string;
+  role: string | null;
 };
 
 type Participant = {
@@ -71,6 +80,7 @@ const tournamentSchema = z.object({
   game_type: z.string().trim().min(2, "Game type is required").max(40),
   participant_target: z.coerce.number().int().min(2).max(64),
   format: z.enum(["Knockout", "Round Robin"]),
+  mode: z.enum(["Solo", "Team"]),
   match_duration_minutes: z.coerce.number().int().min(5).max(240),
   tournament_code: z.string().trim().regex(/^[A-Z0-9]{4,16}$/i, "Use 4-16 letters or numbers").optional().or(z.literal("")),
 });
@@ -98,6 +108,7 @@ export function GameTournamentPlanner() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [teamPlayers, setTeamPlayers] = useState<TeamPlayer[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [bulkNames, setBulkNames] = useState("Team A\nTeam B\nTeam C\nTeam D");
@@ -110,6 +121,7 @@ export function GameTournamentPlanner() {
     game_type: "Valorant",
     participant_target: 4,
     format: "Knockout" as Format,
+    mode: "Solo" as Mode,
     match_duration_minutes: 30,
     tournament_code: "",
   });
@@ -220,8 +232,32 @@ export function GameTournamentPlanner() {
     ]);
     if (playersRes.error && showErrors) toast({ title: "Roster failed", description: playersRes.error.message, variant: "destructive" });
     if (matchesRes.error && showErrors) toast({ title: "Matches failed", description: matchesRes.error.message, variant: "destructive" });
-    setParticipants((playersRes.data ?? []) as Participant[]);
+    const players = (playersRes.data ?? []) as Participant[];
+    setParticipants(players);
     setMatches((matchesRes.data ?? []) as Match[]);
+    if (players.length) {
+      const ids = players.map((p) => p.id);
+      const { data: tp } = await db.from("team_players").select("*").in("participant_id", ids);
+      setTeamPlayers((tp ?? []) as TeamPlayer[]);
+    } else {
+      setTeamPlayers([]);
+    }
+  };
+
+  const addTeamPlayer = async (participantId: string, name: string, role: string) => {
+    if (!isOwner) return;
+    const clean = name.trim();
+    if (!clean) return toast({ title: "Player name required", variant: "destructive" });
+    const { error } = await db.from("team_players").insert({ participant_id: participantId, name: clean, role: role.trim() || null });
+    if (error) return toast({ title: "Could not add player", description: error.message, variant: "destructive" });
+    if (selectedTournament) await loadTournamentData(selectedTournament.id, false);
+  };
+
+  const removeTeamPlayer = async (id: string) => {
+    if (!isOwner) return;
+    const { error } = await db.from("team_players").delete().eq("id", id);
+    if (error) return toast({ title: "Could not remove player", description: error.message, variant: "destructive" });
+    if (selectedTournament) await loadTournamentData(selectedTournament.id, false);
   };
 
   const handleAuth = async (event: FormEvent) => {
@@ -522,12 +558,20 @@ export function GameTournamentPlanner() {
                   <Field label="Players"><Input type="number" min={2} max={64} value={form.participant_target} onChange={(e) => setForm({ ...form, participant_target: Number(e.target.value) })} /></Field>
                   <Field label="Minutes"><Input type="number" min={5} max={240} value={form.match_duration_minutes} onChange={(e) => setForm({ ...form, match_duration_minutes: Number(e.target.value) })} /></Field>
                 </div>
-                <Field label="Format">
-                  <Select value={form.format} onValueChange={(value: Format) => setForm({ ...form, format: value })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="Knockout">Knockout</SelectItem><SelectItem value="Round Robin">Round Robin</SelectItem></SelectContent>
-                  </Select>
-                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Format">
+                    <Select value={form.format} onValueChange={(value: Format) => setForm({ ...form, format: value })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="Knockout">Knockout</SelectItem><SelectItem value="Round Robin">Round Robin</SelectItem></SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Mode">
+                    <Select value={form.mode} onValueChange={(value: Mode) => setForm({ ...form, mode: value })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="Solo">Solo (1v1)</SelectItem><SelectItem value="Team">Team vs Team</SelectItem></SelectContent>
+                    </Select>
+                  </Field>
+                </div>
                 <Field label="Custom Joining ID (optional)">
                   <Input
                     value={form.tournament_code}
@@ -576,7 +620,7 @@ export function GameTournamentPlanner() {
                     <TabsTrigger value="standings">Standings</TabsTrigger>
                   </TabsList>
                   <TabsContent value="bracket"><BracketPanel rounds={rounds} participantMap={participantMap} onGenerate={generateSchedule} canEdit={isOwner} format={selectedTournament.format} /></TabsContent>
-                  <TabsContent value="roster"><RosterPanel participants={participants} bulkNames={bulkNames} setBulkNames={setBulkNames} addParticipants={addParticipants} newParticipant={newParticipant} setNewParticipant={setNewParticipant} saveParticipant={saveParticipant} editParticipant={(p) => { setEditingParticipant(p.id); setNewParticipant({ name: p.name, team_name: p.team_name ?? "", logo_url: p.logo_url ?? "" }); }} removeParticipant={removeParticipant} canEdit={isOwner} editing={editingParticipant} /></TabsContent>
+                  <TabsContent value="roster"><RosterPanel mode={selectedTournament.mode} teamPlayers={teamPlayers} addTeamPlayer={addTeamPlayer} removeTeamPlayer={removeTeamPlayer} participants={participants} bulkNames={bulkNames} setBulkNames={setBulkNames} addParticipants={addParticipants} newParticipant={newParticipant} setNewParticipant={setNewParticipant} saveParticipant={saveParticipant} editParticipant={(p) => { setEditingParticipant(p.id); setNewParticipant({ name: p.name, team_name: p.team_name ?? "", logo_url: p.logo_url ?? "" }); }} removeParticipant={removeParticipant} canEdit={isOwner} editing={editingParticipant} /></TabsContent>
                   <TabsContent value="scores"><ScoresPanel matches={matches} participantMap={participantMap} updateScore={updateScore} canEdit={isOwner} /></TabsContent>
                   <TabsContent value="standings"><StandingsPanel standings={standings} /></TabsContent>
                 </Tabs>
@@ -623,7 +667,7 @@ export function GameTournamentPlanner() {
                           <span className="text-xs text-primary">#{tournament.tournament_code}</span>
                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground">{tournament.game_type} • {tournament.format} • {tournament.status}</p>
+                      <p className="text-sm text-muted-foreground">{tournament.game_type} • {tournament.format} • {tournament.mode ?? "Solo"} • {tournament.status}</p>
                     </button>
                     {manageable && (
                       <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border/50 pt-2">
@@ -686,7 +730,69 @@ function MatchName({ id, map }: { id: string | null; map: Map<string, Participan
 }
 
 function RosterPanel(props: any) {
-  return <Panel title="Player / Team Management" icon={<Users className="text-primary" />}><div className="grid gap-4 lg:grid-cols-2"><div className="space-y-3"><Textarea value={props.bulkNames} onChange={(e) => props.setBulkNames(e.target.value)} rows={6} placeholder="One player/team per line" />{props.canEdit && <Button variant="neon" onClick={props.addParticipants}><Plus /> Upload List</Button>}<div className="grid gap-2"><Input value={props.newParticipant.name} onChange={(e) => props.setNewParticipant({ ...props.newParticipant, name: e.target.value })} placeholder="Player or team name" /><Input value={props.newParticipant.team_name} onChange={(e) => props.setNewParticipant({ ...props.newParticipant, team_name: e.target.value })} placeholder="Team name optional" /><Input value={props.newParticipant.logo_url} onChange={(e) => props.setNewParticipant({ ...props.newParticipant, logo_url: e.target.value })} placeholder="Logo URL optional" />{props.canEdit && <Button variant="arcade" onClick={props.saveParticipant}>{props.editing ? "Save Edit" : "Add Competitor"}</Button>}</div></div><div className="space-y-2">{props.participants.map((p: Participant) => <div key={p.id} className="clip-corner flex items-center justify-between gap-3 border border-border bg-background/60 p-3"><MatchName id={p.id} map={new Map(props.participants.map((x: Participant) => [x.id, x]))} /><div className="flex gap-1">{props.canEdit && <><Button variant="ghost" size="icon" onClick={() => props.editParticipant(p)}><Pencil /></Button><Button variant="ghost" size="icon" onClick={() => props.removeParticipant(p.id)}><Trash2 /></Button></>}</div></div>)}</div></div></Panel>;
+  const isTeam = props.mode === "Team";
+  const teamPlayersByParticipant = (id: string) => (props.teamPlayers ?? []).filter((tp: TeamPlayer) => tp.participant_id === id);
+  return <Panel title={isTeam ? "Team Management" : "Player / Team Management"} icon={<Users className="text-primary" />}>
+    <div className="grid gap-4 lg:grid-cols-2">
+      <div className="space-y-3">
+        <Textarea value={props.bulkNames} onChange={(e) => props.setBulkNames(e.target.value)} rows={6} placeholder={isTeam ? "One team name per line" : "One player/team per line"} />
+        {props.canEdit && <Button variant="neon" onClick={props.addParticipants}><Plus /> Upload List</Button>}
+        <div className="grid gap-2">
+          <Input value={props.newParticipant.name} onChange={(e) => props.setNewParticipant({ ...props.newParticipant, name: e.target.value })} placeholder={isTeam ? "Team name" : "Player or team name"} />
+          {!isTeam && <Input value={props.newParticipant.team_name} onChange={(e) => props.setNewParticipant({ ...props.newParticipant, team_name: e.target.value })} placeholder="Team name optional" />}
+          <Input value={props.newParticipant.logo_url} onChange={(e) => props.setNewParticipant({ ...props.newParticipant, logo_url: e.target.value })} placeholder="Logo URL optional" />
+          {props.canEdit && <Button variant="arcade" onClick={props.saveParticipant}>{props.editing ? "Save Edit" : isTeam ? "Add Team" : "Add Competitor"}</Button>}
+        </div>
+      </div>
+      <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+        {props.participants.map((p: Participant) => (
+          <div key={p.id} className="clip-corner border border-border bg-background/60 p-3 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <MatchName id={p.id} map={new Map(props.participants.map((x: Participant) => [x.id, x]))} />
+              <div className="flex gap-1">
+                {props.canEdit && <><Button variant="ghost" size="icon" onClick={() => props.editParticipant(p)}><Pencil /></Button><Button variant="ghost" size="icon" onClick={() => props.removeParticipant(p.id)}><Trash2 /></Button></>}
+              </div>
+            </div>
+            {isTeam && (
+              <TeamRoster
+                participantId={p.id}
+                players={teamPlayersByParticipant(p.id)}
+                canEdit={props.canEdit}
+                onAdd={props.addTeamPlayer}
+                onRemove={props.removeTeamPlayer}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  </Panel>;
+}
+
+function TeamRoster({ participantId, players, canEdit, onAdd, onRemove }: { participantId: string; players: TeamPlayer[]; canEdit: boolean; onAdd: (id: string, name: string, role: string) => void; onRemove: (id: string) => void; }) {
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  return (
+    <div className="border-t border-border/50 pt-2 space-y-2">
+      <p className="text-[10px] font-display uppercase text-muted-foreground">Team Players ({players.length})</p>
+      <div className="space-y-1">
+        {players.map((pl) => (
+          <div key={pl.id} className="flex items-center justify-between text-xs bg-background/40 px-2 py-1 rounded">
+            <span><span className="text-primary">{pl.name}</span>{pl.role && <span className="text-muted-foreground"> · {pl.role}</span>}</span>
+            {canEdit && <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onRemove(pl.id)}><Trash2 className="h-3 w-3" /></Button>}
+          </div>
+        ))}
+        {!players.length && <p className="text-xs text-muted-foreground">No players added.</p>}
+      </div>
+      {canEdit && (
+        <div className="flex gap-1">
+          <Input className="h-8 text-xs" placeholder="Player name" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input className="h-8 text-xs w-24" placeholder="Role" value={role} onChange={(e) => setRole(e.target.value)} />
+          <Button size="sm" variant="arcade" onClick={() => { onAdd(participantId, name, role); setName(""); setRole(""); }}><Plus className="h-3 w-3" /></Button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ScoresPanel({ matches, participantMap, updateScore, canEdit }: any) {
