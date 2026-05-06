@@ -730,7 +730,69 @@ function MatchName({ id, map }: { id: string | null; map: Map<string, Participan
 }
 
 function RosterPanel(props: any) {
-  return <Panel title="Player / Team Management" icon={<Users className="text-primary" />}><div className="grid gap-4 lg:grid-cols-2"><div className="space-y-3"><Textarea value={props.bulkNames} onChange={(e) => props.setBulkNames(e.target.value)} rows={6} placeholder="One player/team per line" />{props.canEdit && <Button variant="neon" onClick={props.addParticipants}><Plus /> Upload List</Button>}<div className="grid gap-2"><Input value={props.newParticipant.name} onChange={(e) => props.setNewParticipant({ ...props.newParticipant, name: e.target.value })} placeholder="Player or team name" /><Input value={props.newParticipant.team_name} onChange={(e) => props.setNewParticipant({ ...props.newParticipant, team_name: e.target.value })} placeholder="Team name optional" /><Input value={props.newParticipant.logo_url} onChange={(e) => props.setNewParticipant({ ...props.newParticipant, logo_url: e.target.value })} placeholder="Logo URL optional" />{props.canEdit && <Button variant="arcade" onClick={props.saveParticipant}>{props.editing ? "Save Edit" : "Add Competitor"}</Button>}</div></div><div className="space-y-2">{props.participants.map((p: Participant) => <div key={p.id} className="clip-corner flex items-center justify-between gap-3 border border-border bg-background/60 p-3"><MatchName id={p.id} map={new Map(props.participants.map((x: Participant) => [x.id, x]))} /><div className="flex gap-1">{props.canEdit && <><Button variant="ghost" size="icon" onClick={() => props.editParticipant(p)}><Pencil /></Button><Button variant="ghost" size="icon" onClick={() => props.removeParticipant(p.id)}><Trash2 /></Button></>}</div></div>)}</div></div></Panel>;
+  const isTeam = props.mode === "Team";
+  const teamPlayersByParticipant = (id: string) => (props.teamPlayers ?? []).filter((tp: TeamPlayer) => tp.participant_id === id);
+  return <Panel title={isTeam ? "Team Management" : "Player / Team Management"} icon={<Users className="text-primary" />}>
+    <div className="grid gap-4 lg:grid-cols-2">
+      <div className="space-y-3">
+        <Textarea value={props.bulkNames} onChange={(e) => props.setBulkNames(e.target.value)} rows={6} placeholder={isTeam ? "One team name per line" : "One player/team per line"} />
+        {props.canEdit && <Button variant="neon" onClick={props.addParticipants}><Plus /> Upload List</Button>}
+        <div className="grid gap-2">
+          <Input value={props.newParticipant.name} onChange={(e) => props.setNewParticipant({ ...props.newParticipant, name: e.target.value })} placeholder={isTeam ? "Team name" : "Player or team name"} />
+          {!isTeam && <Input value={props.newParticipant.team_name} onChange={(e) => props.setNewParticipant({ ...props.newParticipant, team_name: e.target.value })} placeholder="Team name optional" />}
+          <Input value={props.newParticipant.logo_url} onChange={(e) => props.setNewParticipant({ ...props.newParticipant, logo_url: e.target.value })} placeholder="Logo URL optional" />
+          {props.canEdit && <Button variant="arcade" onClick={props.saveParticipant}>{props.editing ? "Save Edit" : isTeam ? "Add Team" : "Add Competitor"}</Button>}
+        </div>
+      </div>
+      <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+        {props.participants.map((p: Participant) => (
+          <div key={p.id} className="clip-corner border border-border bg-background/60 p-3 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <MatchName id={p.id} map={new Map(props.participants.map((x: Participant) => [x.id, x]))} />
+              <div className="flex gap-1">
+                {props.canEdit && <><Button variant="ghost" size="icon" onClick={() => props.editParticipant(p)}><Pencil /></Button><Button variant="ghost" size="icon" onClick={() => props.removeParticipant(p.id)}><Trash2 /></Button></>}
+              </div>
+            </div>
+            {isTeam && (
+              <TeamRoster
+                participantId={p.id}
+                players={teamPlayersByParticipant(p.id)}
+                canEdit={props.canEdit}
+                onAdd={props.addTeamPlayer}
+                onRemove={props.removeTeamPlayer}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  </Panel>;
+}
+
+function TeamRoster({ participantId, players, canEdit, onAdd, onRemove }: { participantId: string; players: TeamPlayer[]; canEdit: boolean; onAdd: (id: string, name: string, role: string) => void; onRemove: (id: string) => void; }) {
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  return (
+    <div className="border-t border-border/50 pt-2 space-y-2">
+      <p className="text-[10px] font-display uppercase text-muted-foreground">Team Players ({players.length})</p>
+      <div className="space-y-1">
+        {players.map((pl) => (
+          <div key={pl.id} className="flex items-center justify-between text-xs bg-background/40 px-2 py-1 rounded">
+            <span><span className="text-primary">{pl.name}</span>{pl.role && <span className="text-muted-foreground"> · {pl.role}</span>}</span>
+            {canEdit && <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onRemove(pl.id)}><Trash2 className="h-3 w-3" /></Button>}
+          </div>
+        ))}
+        {!players.length && <p className="text-xs text-muted-foreground">No players added.</p>}
+      </div>
+      {canEdit && (
+        <div className="flex gap-1">
+          <Input className="h-8 text-xs" placeholder="Player name" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input className="h-8 text-xs w-24" placeholder="Role" value={role} onChange={(e) => setRole(e.target.value)} />
+          <Button size="sm" variant="arcade" onClick={() => { onAdd(participantId, name, role); setName(""); setRole(""); }}><Plus className="h-3 w-3" /></Button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ScoresPanel({ matches, participantMap, updateScore, canEdit }: any) {
